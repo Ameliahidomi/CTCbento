@@ -85,32 +85,9 @@ button.secondary{background:#ffb777;color:#000}
         <select id="menuItem"></select>
       </div>
 
-
-    <!-- 拿坡里加選 -->
-    <div class="row hidden" id="pizzaRow">
-      <label>披薩口味</label>
-      <select id="pizzaFlavor"></select>
-    </div>
-
-    <div class="row hidden" id="sideRow">
-      <label>配餐</label>
-      <select id="sideItem"></select>
-    </div>
-
-    <div class="row hidden" id="drinkRow">
-      <label>飲料</label>
-      <select id="drinkItem">
-        <option>可口可樂350ml</option>
-        <option>雪碧350ml</option>
-        <option>美粒果柳橙汁315ml</option>
-        <option>美粒果蘋果汁315ml</option>
-        <option>原萃日式綠茶350ml</option>
-      </select>
-    </div>
-
-    <!-- 灶蹄蹤堂主食 -->
+    <!-- 佑佑鍋燒主食 -->
     <div class="row hidden" id="additionalRow">
-      <label>主食</label>
+      <label>鍋燒主食換</label>
       <select id="potMain"></select>
     </div>
 
@@ -192,6 +169,9 @@ const potMainSel = el("potMain");
 const teaRestaurantSel = el("teaRestaurant");
 const teaItemSel = el("teaItem");
 
+function resetQty() {
+  el("qty").value = 1;
+}
 /* ========= 午餐：載入 Menus（包含分類） ========= */
 async function loadMenus() {
   try {
@@ -236,120 +216,107 @@ function populateMenu(restaurant) {
   el("additionalRow").classList.add("hidden");
   potMainSel.innerHTML = "";
 
-  if (restaurant.includes("灶蹄蹤堂")) showMainOptions();
+  if (restaurant.includes("佑佑鍋燒")) showMainOptions();
 }
 
 restaurantSel.addEventListener("change", () => {
+resetQty();
   populateMenu(restaurantSel.value);
   el("qty").value = 1;
   el("note").value = "";
   el("spice").selectedIndex = 0;
   el("additionalRow").classList.add("hidden");
   potMainSel.innerHTML = "";
-  if (restaurantSel.value.includes("灶蹄蹤堂")) showMainOptions();
+  if (restaurantSel.value.includes("佑佑鍋燒")) showMainOptions();
 });
 
 menuItemSel.addEventListener("change", () => {
+resetQty();
   const restaurant = restaurantSel.value;
-  const itemObj = JSON.parse(menuItemSel.value || "{}");
-
-  hideNapoli();
-
-  if (restaurant.includes("拿坡里")) {
-    handleNapoliItem(itemObj.name || "", restaurant);
-  }
-
-  if (restaurant.includes("灶蹄蹤堂")) showMainOptions();
+  if (restaurant.includes("佑佑鍋燒")) showMainOptions();
   else el("additionalRow").classList.add("hidden");
 });
 
 function showMainOptions() {
   const additionalRow = el("additionalRow");
-  additionalRow.querySelector("label").textContent = "主食";
-  potMainSel.innerHTML = `
-    <option>正常飯</option>
-    <option>正常飯+滷汁</option>
-    <option>半飯</option>
-    <option>半飯+滷汁</option>
-    <option>不飯換菜</option>
-  `;
-  additionalRow.classList.remove("hidden");
-}
+  additionalRow.querySelector("label").textContent = "鍋燒主食換";
 
-/* ===== 拿坡里工具 ===== */
-const MINI_PIZZA=[
-  "Mini總匯","Mini海鮮","Mini夏威夷",
-  "Mini燻雞","Mini蔬菜","Mini臘腸"
-];
+  const itemObj = JSON.parse(menuItemSel.value || "{}");
+  if (!itemObj.name) {
+    additionalRow.classList.add("hidden");
+    return;
+  }
 
-function hideNapoli() {
-  ["pizzaRow", "sideRow", "drinkRow"].forEach(id => {
-    el(id).classList.add("hidden");
+  const YOYO_POT_CONFIG = {
+    "原味湯底": [
+      { name: "烏龍麵", price: 20 },
+      { name: "意麵", price: 0 },
+      { name: "麵疙瘩", price: 5 },
+      { name: "雞絲", price: 0 },
+      { name: "冬粉", price: -5 },
+      { name: "泡飯", price: -5 }
+    ],
+    "泡菜湯底": [
+      { name: "烏龍麵", price: 25 },
+      { name: "意麵", price: 0 },
+      { name: "麵疙瘩", price: 5 },
+      { name: "雞絲", price: 0 },
+      { name: "冬粉", price: -5 },
+      { name: "泡飯", price: -5 }
+    ],
+    "麻辣湯底": [
+      { name: "烏龍麵", price: 20 },
+      { name: "意麵", price: 0 },
+      { name: "麵疙瘩", price: 5 },
+      { name: "雞絲", price: 0 },
+      { name: "冬粉", price: -5 },
+      { name: "泡飯", price: -5 }
+    ],
+    "剁椒湯底": [
+      { name: "烏龍麵", price: 20 },
+      { name: "意麵", price: 0 },
+      { name: "麵疙瘩", price: 5 },
+      { name: "雞絲", price: 0 },
+      { name: "冬粉", price: -5 },
+      { name: "泡飯", price: -5 }
+    ],
+    "麻奶湯底": [
+      { name: "烏龍麵", price: 20 },
+      { name: "意麵", price: 0 },
+      { name: "麵疙瘩", price: 5 },
+      { name: "雞絲", price: 0 },
+      { name: "冬粉", price: -5 },
+      { name: "泡飯", price: -5 }
+    ]
+  };
+
+  let soupKey = null;
+  if (itemObj.name.includes("原味")) soupKey = "原味湯底";
+  else if (itemObj.name.includes("泡菜")) soupKey = "泡菜湯底";
+  else if (itemObj.name.includes("麻辣")) soupKey = "麻辣湯底";
+  else if (itemObj.name.includes("剁椒")) soupKey = "剁椒湯底";
+  else if (itemObj.name.includes("麻奶")) soupKey = "麻奶湯底";
+
+  const options = YOYO_POT_CONFIG[soupKey];
+  if (!options) {
+    additionalRow.classList.add("hidden");
+    return;
+  }
+
+  potMainSel.innerHTML = "";
+  options.forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt.name;
+    o.dataset.extra = opt.price;   // ⭐ 關鍵：存加價
+    o.textContent =
+       opt.price === 0
+       ? opt.name
+       : `${opt.name} (${opt.price > 0 ? "+" : ""}${opt.price}元)`;
+
+    potMainSel.appendChild(o);
   });
-  el("pizzaFlavor").disabled = false;
-  el("sideItem").disabled = false;
-}
 
-function showPizza(list){
-  const s=el("pizzaFlavor"); s.innerHTML="";
-  list.forEach(v=>s.append(new Option(v,v)));
-  el("pizzaRow").classList.remove("hidden");
-}
-function showSide(list,fixed=false){
-  const s=el("sideItem"); s.innerHTML="";
-  list.forEach(v=>s.append(new Option(v,v)));
-  s.disabled=fixed;
-  el("sideRow").classList.remove("hidden");
-}
-function showDrink(){
-  el("drinkRow").classList.remove("hidden");
-}
-
-function handleNapoliItem(name, restaurant) {
-  hideNapoli();
-
-  // Mini A
-  if (name.includes("Mini A")) {
-    showPizza(MINI_PIZZA);
-    showSide(["現炸脆薯", "起酥紅豆派2入"]);
-    showDrink();
-    return;
-  }
-
-  // Mini B
-  if (name.includes("Mini B")) {
-    showPizza(MINI_PIZZA);
-    showSide(["香酥雞塊"], true);
-    showDrink();
-    return;
-  }
-
-  // Mini C
-  if (name.includes("Mini C")) {
-    showPizza(MINI_PIZZA);
-    showSide(["香草雞翅"], true);
-    showDrink();
-    return;
-  }
-
-  // 個人獨享 → 燉飯 + 迷你瓶飲料
-  if (name.includes("燉飯") && name.includes("迷你瓶")) {
-    showPizza(["奶油海鮮", "南洋打拋豬"]);
-    showDrink();
-    return;
-  }
-
-  // 個人獨享 → 燉麵 + 迷你瓶飲料
-if (name.includes("燉麵") && name.includes("迷你瓶")) {
-
-  // 燻雞焗烤麵 → 披薩口味固定燻雞
-  if (name.includes("燻雞")) {
-    showPizza(["燻雞"]);
-    el("pizzaFlavor").disabled = true;
-  }
-  showDrink();
-  return;
-}
+  additionalRow.classList.remove("hidden");
 }
 
 /* ========= 下午茶：載入 Menu-tea（包含分類） ========= */
@@ -473,31 +440,20 @@ el("addLunch").addEventListener("click", async () => {
 
   params.append("category", itemObj.cat || "");   // ✅ 關鍵：分類回傳
   params.append("item", itemObj.name);
-  params.append("price", itemObj.price ?? "");
+  let finalPrice = Number(itemObj.price) || 0;
+
+  // 主食加價
+  const selectedOpt = potMainSel.selectedOptions[0];
+  if (selectedOpt && selectedOpt.dataset.extra) {
+  finalPrice += Number(selectedOpt.dataset.extra);
+}
+
+params.append("price", finalPrice);
 
   params.append("spice", el("spice").value);
   params.append("qty", el("qty").value);
   params.append("note", el("note").value);
   params.append("potMain", el("potMain").value || "");
-
-params.append("note", el("note").value);
-params.append("potMain", el("potMain").value || "");
-
-// ✅ 拿坡里加選回傳
-params.append(
-  "pizzaFlavor",
-  el("pizzaRow").classList.contains("hidden") ? "" : el("pizzaFlavor").value
-);
-
-params.append(
-  "drink",
-  el("drinkRow").classList.contains("hidden") ? "" : el("drinkItem").value
-);
-
-params.append(
-  "side",
-  el("sideRow").classList.contains("hidden") ? "" : el("sideItem").value
-);
 
   try {
     const res = await fetch(GOOGLE_WEBAPP_URL, {
@@ -520,47 +476,25 @@ async function renderOrders() {
   if (!CURRENT_USER) return;
 
   try {
-    const res = await fetch(
-      `${GOOGLE_WEBAPP_URL}?action=getOrders&employee=${encodeURIComponent(CURRENT_USER.name)}`
-    );
+    const res = await fetch(`${GOOGLE_WEBAPP_URL}?action=getOrders&employee=${encodeURIComponent(CURRENT_USER.name)}`);
     const data = await res.json();
 
     ordersList.innerHTML = "";
-
     data.forEach((o, idx) => {
       const div = document.createElement("div");
       div.className = "order-item";
-
       div.innerHTML = `
         <strong>#${idx + 1} ${o.restaurant} - ${o.item}</strong>
-
-        <div class="small">
-          分類: ${o.category || ""}｜
-          日期: ${o.date}｜
-          數量: ${o.qty}｜
-          價格: ${o.price} 元｜
-          調味: ${o.spice || ""}
-        </div>
-
-        <div class="small">
-          備註: ${o.note || ""}
-          ${o.potMain ? "｜主食: " + o.potMain : ""}
-          ${o.pizzaFlavor ? "｜披薩: " + o.pizzaFlavor : ""}
-          ${o.side ? "｜配餐: " + o.side : ""}
-          ${o.drink ? "｜飲料: " + o.drink : ""}
-        </div>
-
+        <div class="small">分類: ${o.category || ""}｜日期: ${o.date}｜數量: ${o.qty}｜價格: ${o.price} 元｜調味: ${o.spice || ""}</div>
+        <div class="small">備註: ${o.note || ""}${o.potMain ? "｜主食: " + o.potMain : ""}</div>
         <button class="delete-btn" data-id="${o.id}">刪除</button>
       `;
-
-      ordersList.appendChild(div); 
+      ordersList.appendChild(div);
     });
 
-    // ✅ 綁定刪除事件（要在 forEach 外）
     document.querySelectorAll(".delete-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
         if (!confirm("確定要刪除此筆訂單嗎？")) return;
-
         const params = new URLSearchParams();
         params.append("action", "delete");
         params.append("id", btn.dataset.id);
@@ -571,11 +505,9 @@ async function renderOrders() {
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: params,
         });
-
         renderOrders();
       });
     });
-
   } catch (e) {
     console.error("renderOrders error", e);
   }
