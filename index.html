@@ -85,9 +85,9 @@ button.secondary{background:#ffb777;color:#000}
         <select id="menuItem"></select>
       </div>
 
-    <!-- 佑佑鍋燒主食 -->
+    <!-- 二番紅鍋燒食事主食 -->
     <div class="row hidden" id="additionalRow">
-      <label>鍋燒主食換</label>
+      <label>主食</label>
       <select id="potMain"></select>
     </div>
 
@@ -216,7 +216,7 @@ function populateMenu(restaurant) {
   el("additionalRow").classList.add("hidden");
   potMainSel.innerHTML = "";
 
-  if (restaurant.includes("佑佑鍋燒")) showMainOptions();
+  if (restaurant.includes("灶蹄蹤堂")) showMainOptions();
 }
 
 restaurantSel.addEventListener("change", () => {
@@ -227,95 +227,30 @@ resetQty();
   el("spice").selectedIndex = 0;
   el("additionalRow").classList.add("hidden");
   potMainSel.innerHTML = "";
-  if (restaurantSel.value.includes("佑佑鍋燒")) showMainOptions();
+  if (restaurantSel.value.includes("二番紅鍋燒食事")) showMainOptions();
 });
 
 menuItemSel.addEventListener("change", () => {
 resetQty();
   const restaurant = restaurantSel.value;
-  if (restaurant.includes("佑佑鍋燒")) showMainOptions();
+  if (restaurant.includes("二番紅鍋燒食事")) showMainOptions();
   else el("additionalRow").classList.add("hidden");
 });
 
 function showMainOptions() {
   const additionalRow = el("additionalRow");
-  additionalRow.querySelector("label").textContent = "鍋燒主食換";
-
-  const itemObj = JSON.parse(menuItemSel.value || "{}");
-  if (!itemObj.name) {
-    additionalRow.classList.add("hidden");
-    return;
-  }
-
-  const YOYO_POT_CONFIG = {
-    "原味湯底": [
-      { name: "烏龍麵", price: 20 },
-      { name: "意麵", price: 0 },
-      { name: "麵疙瘩", price: 5 },
-      { name: "雞絲", price: 0 },
-      { name: "冬粉", price: -5 },
-      { name: "泡飯", price: -5 }
-    ],
-    "泡菜湯底": [
-      { name: "烏龍麵", price: 25 },
-      { name: "意麵", price: 0 },
-      { name: "麵疙瘩", price: 5 },
-      { name: "雞絲", price: 0 },
-      { name: "冬粉", price: -5 },
-      { name: "泡飯", price: -5 }
-    ],
-    "麻辣湯底": [
-      { name: "烏龍麵", price: 20 },
-      { name: "意麵", price: 0 },
-      { name: "麵疙瘩", price: 5 },
-      { name: "雞絲", price: 0 },
-      { name: "冬粉", price: -5 },
-      { name: "泡飯", price: -5 }
-    ],
-    "剁椒湯底": [
-      { name: "烏龍麵", price: 20 },
-      { name: "意麵", price: 0 },
-      { name: "麵疙瘩", price: 5 },
-      { name: "雞絲", price: 0 },
-      { name: "冬粉", price: -5 },
-      { name: "泡飯", price: -5 }
-    ],
-    "麻奶湯底": [
-      { name: "烏龍麵", price: 20 },
-      { name: "意麵", price: 0 },
-      { name: "麵疙瘩", price: 5 },
-      { name: "雞絲", price: 0 },
-      { name: "冬粉", price: -5 },
-      { name: "泡飯", price: -5 }
-    ]
-  };
-
-  let soupKey = null;
-  if (itemObj.name.includes("原味")) soupKey = "原味湯底";
-  else if (itemObj.name.includes("泡菜")) soupKey = "泡菜湯底";
-  else if (itemObj.name.includes("麻辣")) soupKey = "麻辣湯底";
-  else if (itemObj.name.includes("剁椒")) soupKey = "剁椒湯底";
-  else if (itemObj.name.includes("麻奶")) soupKey = "麻奶湯底";
-
-  const options = YOYO_POT_CONFIG[soupKey];
-  if (!options) {
-    additionalRow.classList.add("hidden");
-    return;
-  }
-
-  potMainSel.innerHTML = "";
-  options.forEach(opt => {
-    const o = document.createElement("option");
-    o.value = opt.name;
-    o.dataset.extra = opt.price;   // ⭐ 關鍵：存加價
-    o.textContent =
-       opt.price === 0
-       ? opt.name
-       : `${opt.name} (${opt.price > 0 ? "+" : ""}${opt.price}元)`;
-
-    potMainSel.appendChild(o);
-  });
-
+  additionalRow.querySelector("label").textContent = "主食";
+  potMainSel.innerHTML = `
+    <option>意麵</option>
+    <option>雞絲麵</option>
+    <option>蒸煮麵</option>
+    <option>冬粉</option>
+    <option>白飯</option>
+    <option>拉麵</option>
+    <option>麵疙瘩</option>
+    <option>科學麵</option>
+    <option>蛋黃麵</option>
+  `;
   additionalRow.classList.remove("hidden");
 }
 
@@ -440,15 +375,7 @@ el("addLunch").addEventListener("click", async () => {
 
   params.append("category", itemObj.cat || "");   // ✅ 關鍵：分類回傳
   params.append("item", itemObj.name);
-  let finalPrice = Number(itemObj.price) || 0;
-
-  // 主食加價
-  const selectedOpt = potMainSel.selectedOptions[0];
-  if (selectedOpt && selectedOpt.dataset.extra) {
-  finalPrice += Number(selectedOpt.dataset.extra);
-}
-
-params.append("price", finalPrice);
+  params.append("price", itemObj.price ?? "");
 
   params.append("spice", el("spice").value);
   params.append("qty", el("qty").value);
