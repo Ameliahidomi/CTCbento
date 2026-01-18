@@ -85,7 +85,7 @@ button.secondary{background:#ffb777;color:#000}
         <select id="menuItem"></select>
       </div>
 
-    <!-- 二番紅鍋燒食事主食 -->
+    <!-- 古早魏爌肉飯主食 -->
     <div class="row hidden" id="additionalRow">
       <label>主食</label>
       <select id="potMain"></select>
@@ -162,6 +162,11 @@ let CURRENT_USER = null;
 let MENUS = {};
 let TEA_DATA = {};
 
+/* --- 設定區：只要餐廳名稱「包含」以下關鍵字，就會顯示主食 --- */
+const potMainConfigs = {
+  "古早魏爌肉飯": ["細麵", "扁麵"],
+};
+
 const el = id => document.getElementById(id);
 const restaurantSel = el("restaurant");
 const menuItemSel = el("menuItem");
@@ -172,7 +177,39 @@ const teaItemSel = el("teaItem");
 function resetQty() {
   el("qty").value = 1;
 }
-/* ========= 午餐：載入 Menus（包含分類） ========= */
+
+// 修改後的關鍵邏輯：餐廳名稱匹配 + 餐點分類關鍵字匹配
+function handlePotMainVisibility() {
+  const restaurant = restaurantSel.value; // 例如 "01/28古早魏爌肉飯"
+  const additionalRow = el("additionalRow");
+  
+  // 1. 取得目前選中的餐點資料 (包含 cat, name, price)
+  let itemObj = {};
+  try {
+    itemObj = JSON.parse(menuItemSel.value || "{}");
+  } catch(e) {
+    itemObj = {};
+  }
+
+  // 2. 判斷餐廳是否匹配 (包含 "古早魏爌肉飯")
+  const isTargetRestaurant = restaurant.includes("古早魏爌肉飯");
+  
+  // 3. 判斷分類是否包含 "麵" 字
+  const isNoodleCategory = itemObj.cat && itemObj.cat.includes("麵");
+
+  // 4. 同時滿足「是該餐廳」且「是麵食類」才顯示
+  if (isTargetRestaurant && isNoodleCategory) {
+    const options = potMainConfigs["古早魏爌肉飯"];
+    potMainSel.innerHTML = options.map(opt => `<option>${opt}</option>`).join('');
+    additionalRow.classList.remove("hidden");
+  } else {
+    // 否則隱藏
+    additionalRow.classList.add("hidden");
+    potMainSel.innerHTML = "";
+  }
+}
+
+/* ========= 午餐：載入 Menus ========= */
 async function loadMenus() {
   try {
     const res = await fetch(`${GOOGLE_WEBAPP_URL}?action=getMenus`);
@@ -189,8 +226,11 @@ async function loadMenus() {
     opt.textContent = r;
     restaurantSel.appendChild(opt);
   });
-  if (restaurantSel.options.length > 0) restaurantSel.selectedIndex = 0;
-  populateMenu(restaurantSel.value);
+
+  if (restaurantSel.options.length > 0) {
+    restaurantSel.selectedIndex = 0;
+    populateMenu(restaurantSel.value);
+  }
 }
 
 function populateMenu(restaurant) {
@@ -208,53 +248,29 @@ function populateMenu(restaurant) {
       lastCat = it.cat;
     }
     const option = document.createElement("option");
-    option.value = JSON.stringify(it); // it = {cat,name,price}
+    option.value = JSON.stringify(it);
     option.textContent = `${it.name} — ${it.price}元`;
     menuItemSel.appendChild(option);
   });
 
-  el("additionalRow").classList.add("hidden");
-  potMainSel.innerHTML = "";
-
-  if (restaurant.includes("灶蹄蹤堂")) showMainOptions();
+  // 確保每次產生菜單後，都執行一次檢查
+  handlePotMainVisibility(); 
 }
 
 restaurantSel.addEventListener("change", () => {
-resetQty();
+  resetQty();
   populateMenu(restaurantSel.value);
-  el("qty").value = 1;
   el("note").value = "";
   el("spice").selectedIndex = 0;
-  el("additionalRow").classList.add("hidden");
-  potMainSel.innerHTML = "";
-  if (restaurantSel.value.includes("二番紅鍋燒食事")) showMainOptions();
 });
 
 menuItemSel.addEventListener("change", () => {
-resetQty();
-  const restaurant = restaurantSel.value;
-  if (restaurant.includes("二番紅鍋燒食事")) showMainOptions();
-  else el("additionalRow").classList.add("hidden");
+  resetQty();
+  // 當更換餐點時，也要確保主食欄位狀態正確
+  handlePotMainVisibility();
 });
 
-function showMainOptions() {
-  const additionalRow = el("additionalRow");
-  additionalRow.querySelector("label").textContent = "主食";
-  potMainSel.innerHTML = `
-    <option>意麵</option>
-    <option>雞絲麵</option>
-    <option>蒸煮麵</option>
-    <option>冬粉</option>
-    <option>白飯</option>
-    <option>拉麵</option>
-    <option>麵疙瘩</option>
-    <option>科學麵</option>
-    <option>蛋黃麵</option>
-  `;
-  additionalRow.classList.remove("hidden");
-}
-
-/* ========= 下午茶：載入 Menu-tea（包含分類） ========= */
+/* ========= 下午茶相關邏輯 ========= */
 async function loadTeaMenus() {
   try {
     const res = await fetch(`${GOOGLE_WEBAPP_URL}?action=getTeaMenus`);
@@ -293,7 +309,7 @@ function populateTeaMenu(restaurant) {
       lastCat = it.cat;
     }
     const option = document.createElement("option");
-    option.value = JSON.stringify(it); // it = {cat,name,price}
+    option.value = JSON.stringify(it);
     option.textContent = `${it.name} — ${it.price}元`;
     teaItemSel.appendChild(option);
   });
@@ -303,42 +319,7 @@ teaRestaurantSel.addEventListener("change", () => {
   populateTeaMenu(teaRestaurantSel.value);
 });
 
-/* ========= 下午茶送單（✅補上 category） ========= */
-el("addTea").addEventListener("click", async () => {
-  const date = new Date().toISOString().slice(0, 10);
-  const itemObj = JSON.parse(teaItemSel.value || "{}");
-  if (!itemObj.name) return alert("請選擇品項");
-
-  const params = new URLSearchParams();
-  params.append("date", date);
-  params.append("employee", CURRENT_USER.name);
-  params.append("restaurant", teaRestaurantSel.value);
-
-  params.append("category", itemObj.cat || "");   // ✅ 關鍵：分類回傳
-  params.append("item", itemObj.name);
-  params.append("price", itemObj.price ?? "");
-
-  params.append("spice", ""); // 下午茶不使用調味
-  params.append("qty", el("teaQty").value);
-  params.append("note", el("teaNote").value);
-  params.append("potMain", "");
-
-  try {
-    const res = await fetch(GOOGLE_WEBAPP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params,
-    });
-    await res.json();
-    alert("下午茶訂單已新增");
-    renderOrders();
-  } catch (e) {
-    console.error(e);
-    alert("新增下午茶失敗");
-  }
-});
-
-/* ========= 登入 ========= */
+/* ========= 登入、送單與訂單渲染 (其餘邏輯維持不變) ========= */
 el("btnLogin").addEventListener("click", async () => {
   const empId = el("empId").value.trim();
   try {
@@ -361,7 +342,6 @@ el("btnLogin").addEventListener("click", async () => {
   }
 });
 
-/* ========= 午餐送單（✅補上 category） ========= */
 el("addLunch").addEventListener("click", async () => {
   const date = new Date().toISOString().slice(0, 10);
   const restaurant = restaurantSel.value;
@@ -372,11 +352,9 @@ el("addLunch").addEventListener("click", async () => {
   params.append("date", date);
   params.append("employee", CURRENT_USER.name);
   params.append("restaurant", restaurant);
-
-  params.append("category", itemObj.cat || "");   // ✅ 關鍵：分類回傳
+  params.append("category", itemObj.cat || "");
   params.append("item", itemObj.name);
   params.append("price", itemObj.price ?? "");
-
   params.append("spice", el("spice").value);
   params.append("qty", el("qty").value);
   params.append("note", el("note").value);
@@ -397,7 +375,38 @@ el("addLunch").addEventListener("click", async () => {
   }
 });
 
-/* ========= 訂單清單 ========= */
+el("addTea").addEventListener("click", async () => {
+  const date = new Date().toISOString().slice(0, 10);
+  const itemObj = JSON.parse(teaItemSel.value || "{}");
+  if (!itemObj.name) return alert("請選擇品項");
+
+  const params = new URLSearchParams();
+  params.append("date", date);
+  params.append("employee", CURRENT_USER.name);
+  params.append("restaurant", teaRestaurantSel.value);
+  params.append("category", itemObj.cat || "");
+  params.append("item", itemObj.name);
+  params.append("price", itemObj.price ?? "");
+  params.append("spice", "");
+  params.append("qty", el("teaQty").value);
+  params.append("note", el("teaNote").value);
+  params.append("potMain", "");
+
+  try {
+    const res = await fetch(GOOGLE_WEBAPP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params,
+    });
+    await res.json();
+    alert("下午茶訂單已新增");
+    renderOrders();
+  } catch (e) {
+    console.error(e);
+    alert("新增下午茶失敗");
+  }
+});
+
 async function renderOrders() {
   const ordersList = el("ordersList");
   if (!CURRENT_USER) return;
@@ -440,7 +449,6 @@ async function renderOrders() {
   }
 }
 
-/* ========= 導覽 ========= */
 el("toLunch").addEventListener("click", () => {
   el("page-home").classList.add("hidden");
   el("page-lunch").classList.remove("hidden");
