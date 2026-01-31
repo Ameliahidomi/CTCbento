@@ -52,7 +52,6 @@ button.secondary{background:#ffb777;color:#000}
 <div class="container" role="application">
   <h1>倉庫訂餐網</h1>
 
-  <!-- Login page -->
   <div id="page-login">
     <div class="row">
       <label for="empId">員工工號</label>
@@ -63,7 +62,6 @@ button.secondary{background:#ffb777;color:#000}
     </div>
   </div>
 
-  <!-- Home -->
   <div id="page-home" class="hidden">
     <p id="welcome"></p>
     <div class="center">
@@ -72,7 +70,6 @@ button.secondary{background:#ffb777;color:#000}
     </div>
   </div>
 
-  <!-- Lunch -->
   <div id="page-lunch" class="hidden">
     <div class="row">
       <label for="restaurant">餐廳名稱</label>
@@ -85,7 +82,6 @@ button.secondary{background:#ffb777;color:#000}
         <select id="menuItem"></select>
       </div>
 
-    <!--有春鍋燒˙咖哩-->
     <div class="row hidden" id="additionalRow">
       <label>主食</label>
       <select id="potMain"></select>
@@ -118,7 +114,6 @@ button.secondary{background:#ffb777;color:#000}
   </div>
 </div>
 
-  <!-- Tea -->
   <div id="page-tea" class="hidden">
     <div class="row">
       <label for="teaRestaurant">餐廳名稱</label>
@@ -148,7 +143,6 @@ button.secondary{background:#ffb777;color:#000}
     </div>
   </div>
 
-  <!-- Orders -->
   <div class="orders">
     <h3>我的訂單（即時顯示）</h3>
     <div id="ordersList"></div>
@@ -162,9 +156,16 @@ let CURRENT_USER = null;
 let MENUS = {};
 let TEA_DATA = {};
 
-/* --- 設定區：只要餐廳名稱「包含」以下關鍵字，就會顯示主食 --- */
+/* --- 設定區：請確保與資料表分類名稱精準對應 --- */
 const potMainConfigs = {
-  "有春鍋燒˙咖哩": ["意麵", "蒸煮麵", "雞絲", "冬粉", "白飯"],
+  "有春鍋燒˙咖哩": {
+    categoryKey: "鍋燒系列",
+    options: ["意麵", "蒸煮麵", "雞絲", "冬粉", "白飯"]
+  },
+  "三色麵疙瘩": {
+    categoryKey: "--湯　　底--", 
+    options: ["麵疙瘩", "意麵", "雞絲", "冬粉", "泡飯", "蒸煮麵", "王子麵", "烏龍麵"]
+  }
 };
 
 const el = id => document.getElementById(id);
@@ -178,35 +179,32 @@ function resetQty() {
   el("qty").value = 1;
 }
 
-// 修改後的關鍵邏輯：餐廳名稱匹配 + 餐點分類關鍵字匹配
 function handlePotMainVisibility() {
-  const restaurant = restaurantSel.value; // 
+  const restaurant = restaurantSel.value;
   const additionalRow = el("additionalRow");
   
-  // 1. 取得目前選中的餐點資料 (包含 cat, name, price)
   let itemObj = {};
   try {
     itemObj = JSON.parse(menuItemSel.value || "{}");
-  } catch(e) {
-    itemObj = {};
-  }
+  } catch(e) { itemObj = {}; }
 
-  // 2. 判斷餐廳是否匹配
-  const isTargetRestaurant = restaurant.includes("有春鍋燒˙咖哩");
+  const restaurantKey = Object.keys(potMainConfigs).find(k => restaurant.includes(k));
+  const config = potMainConfigs[restaurantKey];
+
+  // 優化判定：移除空格後進行包含比對，提高容錯率
+  if (config && itemObj.cat) {
+    const cleanCat = itemObj.cat.replace(/\s+/g, ''); // 移除所有空白
+    const cleanKey = config.categoryKey.replace(/\s+/g, '');
+    
+    if (cleanCat.includes(cleanKey)) {
+      potMainSel.innerHTML = config.options.map(opt => `<option>${opt}</option>`).join('');
+      additionalRow.classList.remove("hidden");
+      return;
+    }
+  }
   
-  // 3. 判斷分類是否包含 " " 關鍵字
-  const isNoodleCategory = itemObj.cat && itemObj.cat.includes("鍋燒系列");
-
-  // 4. 同時滿足「是該餐廳」且「是根據分類」才顯示
-  if (isTargetRestaurant && isNoodleCategory) {
-    const options = potMainConfigs["有春鍋燒˙咖哩"];
-    potMainSel.innerHTML = options.map(opt => `<option>${opt}</option>`).join('');
-    additionalRow.classList.remove("hidden");
-  } else {
-    // 否則隱藏
-    additionalRow.classList.add("hidden");
-    potMainSel.innerHTML = "";
-  }
+  additionalRow.classList.add("hidden");
+  potMainSel.innerHTML = "";
 }
 
 /* ========= 午餐：載入 Menus ========= */
@@ -253,7 +251,6 @@ function populateMenu(restaurant) {
     menuItemSel.appendChild(option);
   });
 
-  // 確保每次產生菜單後，都執行一次檢查
   handlePotMainVisibility(); 
 }
 
@@ -266,7 +263,6 @@ restaurantSel.addEventListener("change", () => {
 
 menuItemSel.addEventListener("change", () => {
   resetQty();
-  // 當更換餐點時，也要確保主食欄位狀態正確
   handlePotMainVisibility();
 });
 
@@ -319,7 +315,7 @@ teaRestaurantSel.addEventListener("change", () => {
   populateTeaMenu(teaRestaurantSel.value);
 });
 
-/* ========= 登入、送單與訂單渲染 (其餘邏輯維持不變) ========= */
+/* ========= 登入、送單與訂單渲染 ========= */
 el("btnLogin").addEventListener("click", async () => {
   const empId = el("empId").value.trim();
   try {
