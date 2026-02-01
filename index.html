@@ -156,7 +156,6 @@ let CURRENT_USER = null;
 let MENUS = {};
 let TEA_DATA = {};
 
-/* --- 設定區：請確保與資料表分類名稱精準對應 --- */
 const potMainConfigs = {
   "有春鍋燒˙咖哩": {
     categoryKey: "鍋燒系列",
@@ -191,9 +190,8 @@ function handlePotMainVisibility() {
   const restaurantKey = Object.keys(potMainConfigs).find(k => restaurant.includes(k));
   const config = potMainConfigs[restaurantKey];
 
-  // 優化判定：移除空格後進行包含比對，提高容錯率
   if (config && itemObj.cat) {
-    const cleanCat = itemObj.cat.replace(/\s+/g, ''); // 移除所有空白
+    const cleanCat = itemObj.cat.replace(/\s+/g, '');
     const cleanKey = config.categoryKey.replace(/\s+/g, '');
     
     if (cleanCat.includes(cleanKey)) {
@@ -207,7 +205,6 @@ function handlePotMainVisibility() {
   potMainSel.innerHTML = "";
 }
 
-/* ========= 午餐：載入 Menus ========= */
 async function loadMenus() {
   try {
     const res = await fetch(`${GOOGLE_WEBAPP_URL}?action=getMenus`);
@@ -254,9 +251,24 @@ function populateMenu(restaurant) {
   handlePotMainVisibility(); 
 }
 
+/* --- 修正處：監聽餐廳選單變化 --- */
 restaurantSel.addEventListener("change", () => {
+  const selectedVal = restaurantSel.value;
+  
+  // 檢查是否選到漢堡王
+  if (selectedVal.includes("漢堡王")) {
+    window.open("https://forms.gle/zrCN8DFXG1zqW3TC8", "_blank");
+    
+    // 防呆：開啟後自動跳回第一個選項，避免頁面因無漢堡王菜單而報錯或留空
+    if (restaurantSel.options.length > 0) {
+      restaurantSel.selectedIndex = 0;
+      populateMenu(restaurantSel.value);
+    }
+    return;
+  }
+
   resetQty();
-  populateMenu(restaurantSel.value);
+  populateMenu(selectedVal);
   el("note").value = "";
   el("spice").selectedIndex = 0;
 });
@@ -266,7 +278,6 @@ menuItemSel.addEventListener("change", () => {
   handlePotMainVisibility();
 });
 
-/* ========= 下午茶相關邏輯 ========= */
 async function loadTeaMenus() {
   try {
     const res = await fetch(`${GOOGLE_WEBAPP_URL}?action=getTeaMenus`);
@@ -315,7 +326,6 @@ teaRestaurantSel.addEventListener("change", () => {
   populateTeaMenu(teaRestaurantSel.value);
 });
 
-/* ========= 登入、送單與訂單渲染 ========= */
 el("btnLogin").addEventListener("click", async () => {
   const empId = el("empId").value.trim();
   try {
